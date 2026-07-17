@@ -13,7 +13,7 @@ def ensure_file(path: Path, content: str) -> None:
     if path.exists():
         return
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content)
+    path.write_text(content, encoding="utf-8")
 
 
 def main() -> None:

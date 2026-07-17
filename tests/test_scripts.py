@@ -222,3 +222,76 @@ def test_skill_md_files_in_sync() -> None:
         "SKILL.md and skills/agent-execution-logging/SKILL.md must be "
         "byte-identical; edit both or sync them."
     )
+
+
+def test_add_entry_rejects_empty_file_path(tmp_path: Path) -> None:
+    run(BOOTSTRAP, "--root", str(tmp_path))
+    for spec in ("::only desc", ""):
+        result = run_nocheck(
+            ADD_ENTRY,
+            "--root", str(tmp_path),
+            "--title", "T",
+            "--summary", "S",
+            "--file", spec,
+            "--date", "2026-05-17",
+        )
+        assert result.returncode != 0
+        assert "empty file path" in result.stderr.lower()
+    central = (tmp_path / "docs" / "code-base-ai-update-logs.md").read_text()
+    assert "`` —" not in central
+
+
+def test_add_entry_rejects_invalid_date(tmp_path: Path) -> None:
+    run(BOOTSTRAP, "--root", str(tmp_path))
+    result = run_nocheck(
+        ADD_ENTRY,
+        "--root", str(tmp_path),
+        "--title", "T",
+        "--summary", "S",
+        "--file", "a.py",
+        "--date", "2026-13-40",
+    )
+    assert result.returncode != 0
+    assert "date" in result.stderr.lower()
+
+
+def test_register_id_in_notes_does_not_false_match(tmp_path: Path) -> None:
+    run(BOOTSTRAP, "--root", str(tmp_path))
+    registry = tmp_path / "docs" / "agent-execution-registry.md"
+    # Seed a row whose Notes column references another agent's id in backticks.
+    registry.write_text(
+        registry.read_text()
+        + "| Other | `other-agent` | "
+        "[agent-logs/other-agent.md](./agent-logs/other-agent.md) | "
+        "see `claude-code-opus-4-7` |\n"
+    )
+    result = run(
+        REGISTER,
+        "--root", str(tmp_path),
+        "--agent-label", "Claude Opus 4.7",
+        "--agent-id", "claude-code-opus-4-7",
+    )
+    assert "registered=claude-code-opus-4-7" in result.stdout
+    id_cells = [
+        [c.strip() for c in line.strip().strip("|").split("|")][1]
+        for line in registry.read_text().splitlines()
+        if line.strip().startswith("|")
+    ]
+    assert id_cells.count("`claude-code-opus-4-7`") == 1
+
+
+def test_scripts_handle_non_ascii(tmp_path: Path) -> None:
+    run(BOOTSTRAP, "--root", str(tmp_path))
+    run(
+        ADD_ENTRY,
+        "--root", str(tmp_path),
+        "--title", "Café — déjà vu 日本語",
+        "--summary", "Handled non-ASCII summary.",
+        "--file", "src/café.py::renommé",
+        "--date", "2026-05-17",
+    )
+    central = (tmp_path / "docs" / "code-base-ai-update-logs.md").read_text(
+        encoding="utf-8"
+    )
+    assert "## 2026-05-17 — Café — déjà vu 日本語" in central
+    assert "- `src/café.py` — renommé" in central

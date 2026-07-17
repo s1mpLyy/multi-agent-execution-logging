@@ -123,7 +123,10 @@ The central log is a single append-only file, so two agents working in
 parallel branches will both append and hit a merge conflict.
 
 - **Never delete another agent's entry to resolve a conflict.** Keep both.
-- Order entries oldest-first within a date; newest dates go at the bottom.
+- When resolving a conflict by hand, keep entries oldest-first within a date,
+  with newest dates at the bottom. `add_log_entry.py` only appends in the order
+  entries are added — it does not sort by `--date`, so a back-dated entry lands
+  at the end until you move it.
 - If two entries collide on the same task, merge them into one entry rather
   than dropping either side.
 - Append entries as the *last* action before finishing, so the conflict window

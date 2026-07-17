@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import argparse
 import sys
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 
@@ -53,10 +53,10 @@ def agent_entry(date_str: str, title: str, summary: str, files: list[str],
 
 
 def append_entry(path: Path, entry: str) -> None:
-    existing = path.read_text()
+    existing = path.read_text(encoding="utf-8")
     if existing and not existing.endswith("\n"):
         existing += "\n"
-    path.write_text(existing + "\n" + entry)
+    path.write_text(existing + "\n" + entry, encoding="utf-8")
 
 
 def main() -> None:
@@ -80,6 +80,15 @@ def main() -> None:
     parser.add_argument("--date", default=date.today().isoformat(),
                         help="Entry date (YYYY-MM-DD). Defaults to today.")
     args = parser.parse_args()
+
+    try:
+        datetime.strptime(args.date, "%Y-%m-%d")
+    except ValueError:
+        sys.exit(f"Invalid --date {args.date!r}; expected YYYY-MM-DD.")
+
+    for spec in args.files:
+        if not parse_file(spec)[0]:
+            sys.exit(f"Empty file path in --file spec: {spec!r}")
 
     root = Path(args.root).resolve()
     central_path = root / args.central

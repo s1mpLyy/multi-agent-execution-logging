@@ -48,6 +48,25 @@ def build_log_file_content(
     )
 
 
+def id_already_registered(content: str, agent_id: str) -> bool:
+    """True if agent_id already appears in the registry's ID column.
+
+    Matches the canonical ID column only, so an id that happens to appear in
+    another column (e.g. a Notes reference) cannot cause a false "already
+    registered" that would skip adding the real row.
+    """
+    target = f"`{agent_id}`"
+    for line in content.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+        # Registry columns: Agent | ID | Log file | Notes
+        if len(cells) >= 2 and cells[1] == target:
+            return True
+    return False
+
+
 def ensure_registry_row(
     registry_path: Path,
     agent_label: str,
@@ -57,10 +76,10 @@ def ensure_registry_row(
 ) -> None:
     if not registry_path.exists():
         registry_path.parent.mkdir(parents=True, exist_ok=True)
-        registry_path.write_text(REGISTRY_TEMPLATE)
+        registry_path.write_text(REGISTRY_TEMPLATE, encoding="utf-8")
 
-    content = registry_path.read_text()
-    if re.search(rf"\|\s*`{re.escape(agent_id)}`\s*\|", content):
+    content = registry_path.read_text(encoding="utf-8")
+    if id_already_registered(content, agent_id):
         return
 
     row = (
@@ -70,7 +89,7 @@ def ensure_registry_row(
     )
     if not content.endswith("\n"):
         content += "\n"
-    registry_path.write_text(content + row)
+    registry_path.write_text(content + row, encoding="utf-8")
 
 
 def main() -> None:
@@ -101,7 +120,8 @@ def main() -> None:
 
     if not log_path.exists():
         log_path.write_text(
-            build_log_file_content(
+            encoding="utf-8",
+            data=build_log_file_content(
                 agent_label=args.agent_label,
                 agent_id=agent_id,
                 tool_family=args.tool_family,

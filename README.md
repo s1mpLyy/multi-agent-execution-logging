@@ -155,8 +155,10 @@ up in the registry row and is the filename under `docs/agent-logs/`.
 - The registry exists to avoid maintaining duplicated model lists across
   `CLAUDE.md`, `AGENTS.md`, Cursor rules, etc. Add a model once, reference it
   everywhere.
-- Both scripts are **idempotent** — safe to run on every task, safe to re-run
-  after a bad edit.
+- `bootstrap_logging_structure.py` and `register_agent_log.py` are
+  **idempotent** — safe to re-run after a bad edit. `add_log_entry.py` is
+  intentionally **append-only**: run it once per task, since re-running adds a
+  duplicate entry rather than being a no-op.
 
 ## Development
 
